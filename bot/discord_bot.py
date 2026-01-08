@@ -28,6 +28,7 @@ class DiscordBot(commands.Bot):
 
         super().__init__(
             command_prefix='$',
+            case_insensitive=True,
             intents=intents,
             help_command=None,
             activity=activity
@@ -93,7 +94,7 @@ class DiscordBot(commands.Bot):
         async def test_command(ctx, channel: discord.TextChannel = None):
             await self.command_handler.handle_test(ctx, channel)
 
-        @self.command(name="help")
+        @self.command(name="help", aliases=['h'])
         async def help_command(ctx):
             await self.command_handler.handle_help(ctx)
 
@@ -110,9 +111,9 @@ class DiscordBot(commands.Bot):
         async def whois_command(ctx, member: discord.Member = None):
             await self.command_handler.handle_whois(ctx, member)
 
-        @self.command(name="sourcecode", aliases=["source", "src"])
+        @self.command(name="SourceCode", aliases=["source", "src", "github"])
         async def sourcecode_command(ctx):
-            await self.command_handler.handle_sourcecode(ctx)
+            await self.command_handler.handle_source_code(ctx)
 
         @self.command(name="uptime")
         async def uptime_command(ctx):
@@ -126,8 +127,8 @@ class DiscordBot(commands.Bot):
         async def info_command(ctx):
             await self.command_handler.handle_info(ctx)
 
-        @self.command(name="flipcoin", aliases=["coinflip"])
-        async def flipcoin_command(ctx):
+        @self.command(name="CoinFlip", aliases=["FlipCoin"])
+        async def coinflip_command(ctx):
             await self.command_handler.handle_coinflip(ctx)
 
         @self.command(name="SetNickname", aliases=["SetNick", 'SetName', 'AddNickname', 'AddNick', 'AddName'])
@@ -135,10 +136,19 @@ class DiscordBot(commands.Bot):
         async def set_nickname_command(ctx, member: discord.Member, nickname: str):
             await self.command_handler.handle_set_nickname(ctx, member, nickname)
 
-        @self.command(name="clearnick", aliases=["removenick", "deletenick"])
+        @self.command(name="DeleteNickname", aliases=["DeleteNick", "DeleteName", "RemoveNickname", "RemoveNick", "RemoveName"])
         @commands.has_permissions(manage_nicknames=True)
-        async def clearnick_command(ctx, member: discord.Member):
+        async def delete_nickname_command(ctx, member: discord.Member):
             await self.command_handler.handle_delete_nickname(ctx, member)
+
+        @self.command(name="version", aliases=["ver", "v"])
+        async def version_command(ctx):
+            await self.command_handler.handle_version(ctx)
+
+        @self.command(name="Clean", aliases=["CleanBot", "Clear", "ClearBot"])
+        @commands.has_permissions(manage_messages=True)
+        async def clean_command(ctx, amount: int):
+            await self.command_handler.handle_clean(ctx, amount)
 
     async def _on_ready_handler(self):
         """Obsługa eventu on_ready"""
