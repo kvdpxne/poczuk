@@ -67,8 +67,7 @@ class PurgeCommand:
             embed = create_embed(
                 title="🧹 Wiadomości wyczyszczone",
                 description=f"Usunięto **{deleted_count}** wiadomości",
-                color=discord.Color.green(),
-                timestamp=get_current_datetime()
+                color=discord.Color.green()
             )
 
             if member:
