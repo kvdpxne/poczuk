@@ -69,21 +69,11 @@ class DiscordBot(commands.Bot):
         async def on_command_error(ctx, error):
             await self._on_command_error_handler(ctx, error)
 
-        @self.command(name="logtest")
-        async def logtest_command(ctx):
-            """Testuje system logowania"""
-            self.logger.info("Test logowania INFO")
-            self.logger.warning("Test logowania WARNING")
-            self.logger.error("Test logowania ERROR")
-
-            await ctx.send("✅ Test logowania wykonany. Sprawdź konsolę i plik w logs/")
-
-
         # Zmień deklarację komendy add na:
         @self.command(name="add")
         @commands.has_permissions(administrator=True)
         async def add_command(ctx, channel: discord.TextChannel, clean_time: str, options: str = ""):
-             await self.command_handler.handle_add(ctx, channel, clean_time, options)
+            await self.command_handler.handle_add(ctx, channel, clean_time, options)
 
         @self.command(name="remove")
         @commands.has_permissions(administrator=True)
