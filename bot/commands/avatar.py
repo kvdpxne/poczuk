@@ -1,20 +1,15 @@
-"""
-Moduł komendy !avatar
-"""
-import discord
 from datetime import datetime
-from utils.helpers import create_embed
+
+import discord
 
 
 class AvatarCommand:
-    """Obsługa komendy !avatar"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx, member: discord.Member = None):
-        """Główna metoda obsługi komendy"""
         try:
             target = member or ctx.author
 

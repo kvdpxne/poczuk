@@ -1,10 +1,6 @@
-"""
-Komendy bota
-"""
-
 import discord
 
-from bot.commands import AvatarCommand, CoinflipCommand, UptimeCommand, SetNicknameCommand, HelpCommand, VersionCommand, \
+from bot.commands import AvatarCommand, CoinFlipCommand, UptimeCommand, SetNicknameCommand, HelpCommand, VersionCommand, \
     WhoisCommand, InfoCommand, PurgeCommand, SourceCodeCommand, CleanCommand
 from bot.commands.delete_nickname import DeleteNicknameCommand
 from bot.commands.ping import PingCommand
@@ -15,7 +11,6 @@ from utils.validators import TimeValidator
 
 
 class CommandHandler:
-    """Obsługa komend bota"""
 
     def __init__(self, bot, config_manager, scheduler):
         self.logger = get_module_logger(__name__)
@@ -26,7 +21,7 @@ class CommandHandler:
 
         # Inicjalizacja modułów komend
         self.avatar_command = AvatarCommand(bot, self.logger)
-        self.coinflip_command = CoinflipCommand(bot, self.logger)
+        self.coinflip_command = CoinFlipCommand(bot, self.logger)
         self.delete_nickname = DeleteNicknameCommand(bot, self.logger)
         self.help_command = HelpCommand(bot, self.logger)
         self.ping_command = PingCommand(bot, self.logger)
@@ -39,45 +34,80 @@ class CommandHandler:
         self.source_code_command = SourceCodeCommand(bot, self.logger)
         self.clean_command = CleanCommand(bot, self.logger)
 
-    async def handle_add(self, ctx, channel: discord.TextChannel, clean_time: str):
-        """Obsługuje komendę !add"""
-        # Walidacja czasu
-        if not self.validator.validate_time_format(clean_time):
-            return await ctx.send("❌ Nieprawidłowy format czasu. Użyj HH:MM (np. 03:00)")
+    async def handle_add(self, ctx, channel: discord.TextChannel, clean_time: str, options: str = ""):
+        """Obsługuje komendę !add z opcjonalnymi flagami"""
+        try:
+            # Walidacja czasu
+            if not self.validator.validate_time_format(clean_time):
+                self.logger.warning(f"Nieprawidłowy format czasu: {clean_time} od {ctx.author}")
+                return await ctx.send("❌ Nieprawidłowy format czasu. Użyj HH:MM (np. 03:00)")
 
-        # Sprawdź czy kanał już ma harmonogram
-        existing = self.config_manager.get_schedule(channel.id)
-        if existing:
-            return await ctx.send(
-                f"❌ Kanał {channel.mention} już ma ustawione czyszczenie o {existing.time}"
+            # Sprawdź czy kanał już ma harmonogram
+            existing = self.config_manager.get_schedule(channel.id)
+            if existing:
+                self.logger.info(f"Próba dodania istniejącego harmonogramu: {channel.id} od {ctx.author}")
+                return await ctx.send(
+                    f"❌ Kanał {channel.mention} już ma ustawione czyszczenie o {existing.time}"
+                )
+
+            # Przetwarzanie opcji (flag)
+            send_confirmation = True  # Domyślnie wysyłaj potwierdzenie
+
+            # Sprawdź czy użytkownik podał flagę --no-confirmation
+            if "--no-confirmation" in options.lower():
+                send_confirmation = False
+                self.logger.info(f"Użytkownik {ctx.author} wyłączył potwierdzenie dla {channel.id}")
+
+            # Utwórz nowy harmonogram
+            new_schedule = ChannelSchedule(
+                channel_id=channel.id,
+                channel_name=channel.name,
+                time=clean_time,
+                added_by=ctx.author.id,
+                added_at=get_current_datetime(),
+                send_confirmation=send_confirmation
             )
 
-        # Utwórz nowy harmonogram
-        new_schedule = ChannelSchedule(
-            channel_id=channel.id,
-            channel_name=channel.name,
-            time=clean_time,
-            added_by=ctx.author.id,
-            added_at=get_current_datetime()
-        )
+            # Zapisz harmonogram
+            if self.config_manager.add_schedule(new_schedule):
+                self.logger.info(
+                    f"Dodano harmonogram: kanał={channel.name} ({channel.id}), "
+                    f"czas={clean_time}, potwierdzenie={'TAK' if send_confirmation else 'NIE'}, przez={ctx.author}"
+                )
 
-        # Zapisz harmonogram
-        if self.config_manager.add_schedule(new_schedule):
-            embed = create_embed(
-                title="✅ Harmonogram dodany",
-                description=f"Kanał {channel.mention} będzie czyszczony codziennie o **{clean_time}**",
-                color=discord.Color.green()
-            )
-            embed.add_field(name="ID kanału", value=str(channel.id))
-            embed.add_field(
-                name="Liczba harmonogramów",
-                value=str(len(self.config_manager.load_schedules()))
-            )
-            embed.set_footer(text=f"Dodane przez {ctx.author}")
+                embed = create_embed(
+                    title="✅ Harmonogram dodany",
+                    description=f"Kanał {channel.mention} będzie czyszczony codziennie o **{clean_time}**",
+                    color=discord.Color.green()
+                )
 
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send("❌ Nie udało się dodać harmonogramu")
+                embed.add_field(name="ID kanału", value=str(channel.id), inline=True)
+                embed.add_field(name="Potwierdzenie", value="✅ Włączone" if send_confirmation else "❌ Wyłączone",
+                                inline=True)
+                embed.add_field(
+                    name="Liczba harmonogramów",
+                    value=str(len(self.config_manager.load_schedules())),
+                    inline=True
+                )
+
+                # Informacja o fladze
+                if not send_confirmation:
+                    embed.add_field(
+                        name="ℹ️ Uwaga",
+                        value="Po czyszczeniu **nie zostanie wysłane** potwierdzenie na kanał.",
+                        inline=False
+                    )
+
+                embed.set_footer(text=f"Dodane przez {ctx.author}")
+
+                await ctx.send(embed=embed)
+            else:
+                self.logger.error(f"Błąd zapisu harmonogramu: {channel.id}")
+                await ctx.send("❌ Nie udało się dodać harmonogramu")
+
+        except Exception as e:
+            self.logger.error(f"Błąd w komendzie !add: {e}", exc_info=True)
+            await ctx.send("❌ Wystąpił nieoczekiwany błąd podczas dodawania harmonogramu")
 
     async def handle_remove(self, ctx, channel: discord.TextChannel):
         """Obsługuje komendę !remove"""
@@ -109,11 +139,20 @@ class CommandHandler:
             )
 
             for schedule in schedules:
-                channel_mention = format_channel_mention(self.bot, schedule.channel_id)
+                channel = self.bot.get_channel(schedule.channel_id)
+                channel_mention = channel.mention if channel else f"ID: {schedule.channel_id}"
+
+                # Emoji dla statusu potwierdzenia
+                confirmation_emoji = "✅" if schedule.send_confirmation else "❌"
 
                 embed.add_field(
                     name=f"⏰ {schedule.time}",
-                    value=f"Kanał: {channel_mention}\nID: {schedule.channel_id}",
+                    value=(
+                        f"Kanał: {channel_mention}\n"
+                        f"ID: {schedule.channel_id}\n"
+                        f"Potwierdzenie: {confirmation_emoji} "
+                        f"{'TAK' if schedule.send_confirmation else 'NIE'}"
+                    ),
                     inline=False
                 )
 

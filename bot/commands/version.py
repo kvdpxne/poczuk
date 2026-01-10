@@ -1,13 +1,11 @@
-"""
-Moduł komendy !version
-"""
-import discord
 from datetime import datetime
+
+import discord
+
 from utils.git_version import get_git_version
 
 
 class VersionCommand:
-    """Obsługa komendy !version"""
 
     def __init__(self, bot, logger):
         self.bot = bot
@@ -15,7 +13,6 @@ class VersionCommand:
         self.git_version = get_git_version()
 
     async def handle(self, ctx):
-        """Główna metoda obsługi komendy"""
         try:
             self.logger.info(f"Komenda !version wywołana przez {ctx.author} ({ctx.author.id})")
 
@@ -55,8 +52,6 @@ class VersionCommand:
             await ctx.send("❌ Wystąpił błąd podczas pobierania informacji o wersji")
 
 
-# Funkcja pomocnicza do szybkiego dostępu
 async def send_version_info(ctx, bot, logger):
-    """Szybka funkcja do wysłania informacji o wersji"""
     cmd = VersionCommand(bot, logger)
     await cmd.handle(ctx)

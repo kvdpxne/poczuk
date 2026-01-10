@@ -1,19 +1,15 @@
-"""
-Moduł komendy !sourcecode - pokazuje informacje o kodzie źródłowym
-"""
 import discord
-from utils.helpers import create_embed, get_current_datetime
+
+from utils.helpers import create_embed
 
 
 class SourceCodeCommand:
-    """Obsługa komendy !sourcecode"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx):
-        """Główna metoda obsługi komendy"""
         try:
             self.logger.info(f"Komenda !sourcecode wywołana przez {ctx.author} ({ctx.author.id})")
 

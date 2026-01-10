@@ -1,20 +1,15 @@
-"""
-Moduł komendy !flipcoin
-"""
 import discord
 
 from utils.helpers import create_embed
 
 
 class UptimeCommand:
-    """Obsługa komendy !flipcoin"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx):
-        """Obsługuje komendę !uptime - wyświetla czas działania bota"""
         from datetime import datetime
 
         now = datetime.now()

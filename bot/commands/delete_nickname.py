@@ -1,20 +1,15 @@
-"""
-Moduł komendy !flipcoin
-"""
 import discord
 
 from utils.helpers import create_embed
 
 
 class DeleteNicknameCommand:
-    """Obsługa komendy !flipcoin"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx, member: discord.Member):
-        """Obsługuje komendę !clearnick - usuwa niestandardowy nick użytkownika"""
         try:
             # Sprawdź uprawnienia
             if not ctx.author.guild_permissions.manage_nicknames:

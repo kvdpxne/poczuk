@@ -1,13 +1,11 @@
-"""
-Moduł komendy !clean - czyści wiadomości od botów
-"""
-import discord
 import asyncio
-from utils.helpers import create_embed, get_current_datetime
+
+import discord
+
+from utils.helpers import create_embed
 
 
 class CleanCommand:
-    """Obsługa komendy !clean - usuwa tylko wiadomości od botów"""
 
     def __init__(self, bot, logger):
         self.bot = bot

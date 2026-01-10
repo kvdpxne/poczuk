@@ -1,20 +1,17 @@
-"""
-Moduł komendy !purge - czyści określoną liczbę wiadomości
-"""
-import discord
 import asyncio
-from utils.helpers import create_embed, get_current_datetime
+
+import discord
+
+from utils.helpers import create_embed
 
 
 class PurgeCommand:
-    """Obsługa komendy !purge"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx, amount: int, member: discord.Member = None):
-        """Główna metoda obsługi komendy"""
         try:
             # Sprawdź uprawnienia
             if not ctx.channel.permissions_for(ctx.author).manage_messages:

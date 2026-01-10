@@ -1,21 +1,15 @@
-"""
-Moduł komendy !flipcoin
-"""
-import random
 import discord
-from datetime import datetime
+
 from utils.helpers import create_embed
 
 
 class SetNicknameCommand:
-    """Obsługa komendy !flipcoin"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx, member: discord.Member, nickname: str):
-        """Obsługuje komendę !setnick - zmienia nick użytkownika"""
         try:
             # Sprawdź uprawnienia
             if not ctx.author.guild_permissions.manage_nicknames:

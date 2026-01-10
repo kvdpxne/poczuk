@@ -1,13 +1,11 @@
-"""
-Główna klasa bota Discord - Open/Closed Principle
-"""
 import discord
 from discord.ext import commands
+
+from bot.commands_handler import CommandHandler
 from config.config_manager import ConfigManager
 from config.token_manager import TokenManager
 from scheduler.scheduler import Scheduler
 from utils.logger import get_module_logger, log_bot_ready
-from bot.commands_handler import CommandHandler
 
 
 class DiscordBot(commands.Bot):
@@ -75,10 +73,11 @@ class DiscordBot(commands.Bot):
 
             await self.invoke(ctx)
 
+        # Zmień deklarację komendy add na:
         @self.command(name="add")
         @commands.has_permissions(administrator=True)
-        async def add_command(ctx, channel: discord.TextChannel, clean_time: str):
-            await self.command_handler.handle_add(ctx, channel, clean_time)
+        async def add_command(ctx, channel: discord.TextChannel, clean_time: str, options: str = ""):
+             await self.command_handler.handle_add(ctx, channel, clean_time, options)
 
         @self.command(name="remove")
         @commands.has_permissions(administrator=True)
@@ -136,7 +135,8 @@ class DiscordBot(commands.Bot):
         async def set_nickname_command(ctx, member: discord.Member, nickname: str):
             await self.command_handler.handle_set_nickname(ctx, member, nickname)
 
-        @self.command(name="DeleteNickname", aliases=["DeleteNick", "DeleteName", "RemoveNickname", "RemoveNick", "RemoveName"])
+        @self.command(name="DeleteNickname",
+                      aliases=["DeleteNick", "DeleteName", "RemoveNickname", "RemoveNick", "RemoveName"])
         @commands.has_permissions(manage_nicknames=True)
         async def delete_nickname_command(ctx, member: discord.Member):
             await self.command_handler.handle_delete_nickname(ctx, member)
@@ -181,22 +181,20 @@ class DiscordBot(commands.Bot):
             log_error('commands', error, f"Komenda: {ctx.command.name}, Użytkownik: {ctx.author}")
 
     def run_bot(self):
-        """Uruchamia bota"""
         token = self.token_manager.load_token()
 
         if not token:
-            self.logger.warning("Brak tokenu w pliku, wymagane ręczne podanie")
-            print("\n" + "="*50)
-            print("PIERWSZE URUCHOMIENIE")
-            print("="*50)
+            self.logger.error("Token nie znaleziony w zmiennych środowiskowych!")
+            print("\n" + "=" * 60)
+            print("❌ BRAK TOKENU DISCORD")
+            print("=" * 60)
+            print("\nSposoby konfiguracji tokenu:\n")
 
-            token = input("\nPodaj token bota Discord: ").strip()
+            print("Metoda 1: Plik .env (najlepsza):")
+            print("   echo 'DISCORD_BOT_TOKEN=twój_token' > .env")
+            print("   # DODAJ .env DO .gitignore!")
 
-            if self.token_manager.save_token(token):
-                self.logger.info("Token zapisany do pliku")
-            else:
-                self.logger.error("Nie udało się zapisać tokenu")
-                return
+            return
 
         self.logger.info("Uruchamiam bota...")
         self.run(token)

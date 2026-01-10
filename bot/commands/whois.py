@@ -1,19 +1,15 @@
-"""
-Moduł komendy !whois - pokazuje informacje o użytkowniku
-"""
 import discord
-from utils.helpers import create_embed, format_channel_mention, get_current_datetime
+
+from utils.helpers import create_embed
 
 
 class WhoisCommand:
-    """Obsługa komendy !whois"""
 
     def __init__(self, bot, logger):
         self.bot = bot
         self.logger = logger
 
     async def handle(self, ctx, member: discord.Member = None):
-        """Główna metoda obsługi komendy"""
         try:
             target = member or ctx.author
 

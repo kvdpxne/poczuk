@@ -1,14 +1,10 @@
-"""
-Moduł komendy !flipcoin
-"""
 import random
-import discord
 from datetime import datetime
-from utils.helpers import create_embed
+
+import discord
 
 
-class CoinflipCommand:
-    """Obsługa komendy !flipcoin"""
+class CoinFlipCommand:
 
     def __init__(self, bot, logger):
         self.bot = bot

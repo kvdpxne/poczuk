@@ -44,10 +44,15 @@ class Scheduler:
         try:
             self.logger.info(
                 f"Wykonuję harmonogram: kanał={schedule.channel_name} ({schedule.channel_id}), "
-                f"czas={schedule.time}"
+                f"czas={schedule.time}, potwierdzenie={'TAK' if schedule.send_confirmation else 'NIE'}"
             )
 
-            deleted_count = await self.cleaner.clean_channel(self.bot, schedule.channel_id)
+            # Przekaż informację o potwierdzeniu do cleanera
+            deleted_count = await self.cleaner.clean_channel(
+                self.bot,
+                schedule.channel_id,
+                send_confirmation=schedule.send_confirmation
+            )
 
             # Zaloguj wykonanie
             log_schedule_execution(schedule.channel_id, schedule.channel_name, deleted_count)

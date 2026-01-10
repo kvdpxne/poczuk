@@ -1,14 +1,12 @@
-"""
-Moduł komendy !info - pokazuje informacje o bocie
-"""
+import os
+
 import discord
 import psutil
-import os
-from utils.helpers import create_embed, get_current_datetime
+
+from utils.helpers import create_embed
 
 
 class InfoCommand:
-    """Obsługa komendy !info"""
 
     def __init__(self, bot, config_manager, logger):
         self.bot = bot
@@ -16,7 +14,6 @@ class InfoCommand:
         self.logger = logger
 
     async def handle(self, ctx):
-        """Główna metoda obsługi komendy"""
         try:
             self.logger.info(f"Komenda !info wywołana przez {ctx.author} ({ctx.author.id})")
 

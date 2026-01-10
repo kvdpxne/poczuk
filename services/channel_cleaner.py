@@ -2,7 +2,7 @@
 Serwis czyszczenia kanałów - Single Responsibility Principle
 """
 import discord
-
+from datetime import datetime
 from utils.helpers import create_embed
 from utils.logger import get_module_logger
 
@@ -13,10 +13,14 @@ class ChannelCleaner:
     def __init__(self):
         self.logger = get_module_logger(__name__)
 
-    async def clean_channel(self, bot, channel_id: int) -> int:
+    async def clean_channel(self, bot, channel_id: int, send_confirmation: bool = True) -> int:
         """
         Czyści wszystkie wiadomości na kanale
         Zwraca liczbę usuniętych wiadomości
+
+        :param bot: Instancja bota
+        :param channel_id: ID kanału do wyczyszczenia
+        :param send_confirmation: Czy wysłać wiadomość potwierdzającą (domyślnie: True)
         """
         try:
             channel = bot.get_channel(channel_id)
@@ -31,8 +35,11 @@ class ChannelCleaner:
 
             self.logger.info(f"Zakończono czyszczenie: {deleted_count} wiadomości usunięto")
 
-            # Wyślij potwierdzenie na kanale
-            await self._send_clean_confirmation(channel, deleted_count)
+            # Wyślij potwierdzenie na kanale TYLKO jeśli send_confirmation=True
+            if send_confirmation:
+                await self._send_clean_confirmation(channel, deleted_count)
+            else:
+                self.logger.info(f"Pominięto wysyłanie potwierdzenia dla kanału {channel.id}")
 
             return deleted_count
 

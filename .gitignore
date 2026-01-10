@@ -1,0 +1,30 @@
+# Pliki środowiskowe
+.env
+.env.*
+#
+#
+!.env.example
+
+# Tokeny i klucze
+*.key
+*.pem
+*.secret
+secrets/
+keys/
+
+# Pliki systemowe i IDE
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.swp
+*.swo
+
+# Wirtualne środowisko
+venv/
+env/
+ENV/
+
+# Logi
+logs/*.log

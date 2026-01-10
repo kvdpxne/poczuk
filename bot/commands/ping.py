@@ -1,13 +1,9 @@
-"""
-Moduł komendy !flipcoin
-"""
 import discord
 
 from utils.helpers import create_embed
 
 
 class PingCommand:
-    """Obsługa komendy !flipcoin"""
 
     def __init__(self, bot, logger):
         self.bot = bot
