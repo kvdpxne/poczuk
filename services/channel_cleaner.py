@@ -4,14 +4,14 @@ Serwis czyszczenia kanałów - Single Responsibility Principle
 import discord
 from datetime import datetime
 from utils.helpers import create_embed
-from utils.logger import get_module_logger
+from utils.logger import get_logger
 
 
 class ChannelCleaner:
     """Odpowiedzialny za czyszczenie kanałów Discord"""
 
     def __init__(self):
-        self.logger = get_module_logger(__name__)
+        self.logger = get_logger(__name__)
 
     async def clean_channel(self, bot, channel_id: int, send_confirmation: bool = True) -> int:
         """

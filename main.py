@@ -1,14 +1,13 @@
-"""
-Główny punkt wejścia aplikacji - Single Responsibility Principle
-"""
 from bot.discord_bot import DiscordBot
-from utils.logger import log_bot_start
+from utils.logger import setup_logging, log_info
 
 
 def main():
-    """Główna funkcja uruchamiająca aplikację"""
     # Inicjalizacja logowania
-    log_bot_start()
+    setup_logging()
+
+    # Logi startu
+    log_info('main', "Discord Channel Cleaner - Uruchamianie")
 
     # Utwórz i uruchom bota
     bot = DiscordBot()

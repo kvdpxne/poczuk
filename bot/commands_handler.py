@@ -5,19 +5,19 @@ from bot.commands import AvatarCommand, CoinFlipCommand, UptimeCommand, SetNickn
 from bot.commands.delete_nickname import DeleteNicknameCommand
 from bot.commands.ping import PingCommand
 from models.channel_schedule import ChannelSchedule
-from utils import get_module_logger
-from utils.helpers import create_embed, format_channel_mention, get_current_datetime
+from utils.helpers import create_embed, get_current_datetime
+from utils.logger import get_logger
 from utils.validators import TimeValidator
 
 
 class CommandHandler:
 
     def __init__(self, bot, config_manager, scheduler):
-        self.logger = get_module_logger(__name__)
         self.bot = bot
         self.config_manager = config_manager
         self.scheduler = scheduler
         self.validator = TimeValidator()
+        self.logger = get_logger(__name__)
 
         # Inicjalizacja modułów komend
         self.avatar_command = AvatarCommand(bot, self.logger)

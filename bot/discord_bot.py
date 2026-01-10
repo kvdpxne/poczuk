@@ -5,15 +5,15 @@ from bot.commands_handler import CommandHandler
 from config.config_manager import ConfigManager
 from config.token_manager import TokenManager
 from scheduler.scheduler import Scheduler
-from utils.logger import get_module_logger, log_bot_ready
+from utils.logger import get_logger, log_info, log_command
 
 
 class DiscordBot(commands.Bot):
     """Główna klasa bota Discord Cleaner"""
 
     def __init__(self):
-        # Inicjalizacja loggera
-        self.logger = get_module_logger(__name__)
+        # UŻYJ get_logger ZAMIast get_module_logger
+        self.logger = get_logger(__name__)
 
         intents = discord.Intents.default()
         intents.message_content = True
@@ -46,15 +46,10 @@ class DiscordBot(commands.Bot):
         self.logger.info("Zainicjalizowano bota DiscordBot")
 
     def _setup_events(self):
-        """Konfiguruje eventy bota"""
 
         @self.event
         async def on_ready():
             await self._on_ready_handler()
-
-        @self.event
-        async def on_command_error(ctx, error):
-            await self._on_command_error_handler(ctx, error)
 
         @self.event
         async def on_message(message):
@@ -63,15 +58,26 @@ class DiscordBot(commands.Bot):
             if message.author.bot:
                 return
 
-            # Przetwarzaj komendy
-            ctx = await self.get_context(message)
+            await self.process_commands(message)
 
-            if ctx.command:
-                # Logowanie komendy przed wykonaniem
-                from utils.logger import log_command
-                log_command(ctx)
+        @self.event
+        async def on_command(ctx):
+            """Logowanie każdej wykonanej komendy"""
+            log_command(ctx)
 
-            await self.invoke(ctx)
+        @self.event
+        async def on_command_error(ctx, error):
+            await self._on_command_error_handler(ctx, error)
+
+        @self.command(name="logtest")
+        async def logtest_command(ctx):
+            """Testuje system logowania"""
+            self.logger.info("Test logowania INFO")
+            self.logger.warning("Test logowania WARNING")
+            self.logger.error("Test logowania ERROR")
+
+            await ctx.send("✅ Test logowania wykonany. Sprawdź konsolę i plik w logs/")
+
 
         # Zmień deklarację komendy add na:
         @self.command(name="add")
@@ -156,7 +162,11 @@ class DiscordBot(commands.Bot):
 
         # Zaloguj informacje o starcie
         schedule_count = len(self.config_manager.load_schedules())
-        log_bot_ready(self.user, len(self.guilds), schedule_count)
+
+        log_info('main', f"Bot zalogowany jako: {self.user.name} ({self.user.id})")
+        log_info('main', f"Liczba serwerów: {len(self.guilds)}")
+        log_info('main', f"Liczba harmonogramów: {schedule_count}")
+        log_info('main', "=" * 50)
 
         # Ustaw czas startu dla komendy status
         self.start_time = datetime.now()

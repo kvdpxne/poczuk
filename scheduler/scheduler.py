@@ -7,7 +7,7 @@ from typing import List
 from models.channel_schedule import ChannelSchedule
 from utils.validators import TimeValidator
 from services.channel_cleaner import ChannelCleaner
-from utils.logger import get_module_logger, log_schedule_execution
+from utils.logger import get_logger
 
 
 class Scheduler:
@@ -18,7 +18,7 @@ class Scheduler:
         self.config_manager = config_manager
         self.cleaner = ChannelCleaner()
         self.validator = TimeValidator()
-        self.logger = get_module_logger(__name__)
+        self.logger = get_logger(__name__)
 
     async def start(self):
         """Uruchamia proces sprawdzania harmonogramu"""
@@ -55,7 +55,7 @@ class Scheduler:
             )
 
             # Zaloguj wykonanie
-            log_schedule_execution(schedule.channel_id, schedule.channel_name, deleted_count)
+            # log_schedule_execution(schedule.channel_id, schedule.channel_name, deleted_count)
 
         except Exception as e:
             self.logger.error(
