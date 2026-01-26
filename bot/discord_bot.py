@@ -173,12 +173,9 @@ class DiscordBot(commands.Bot):
         from datetime import datetime
 
         # Zaloguj informacje o starcie
-        schedule_count = len(self.config_manager.load_schedules())
 
         log_info('main', f"Bot zalogowany jako: {self.user.name} ({self.user.id})")
         log_info('main', f"Liczba serwerów: {len(self.guilds)}")
-        log_info('main', f"Liczba harmonogramów: {schedule_count}")
-        log_info('main', "=" * 50)
 
         # Ustaw czas startu dla komendy status
         self.start_time = datetime.now()

@@ -15,7 +15,6 @@ from database.models.log import Log
 from database.models.log_level import LogLevel
 from database.models.schedule import Schedule
 from database.models.user_setting import UserSetting
-from models.channel_schedule import ChannelSchedule
 from models.cleaning_schedule import CleaningSchedule
 from models.debt import Debt as DebtModel
 from models.debt_reminder_schedule import DebtReminderSchedule
@@ -432,14 +431,3 @@ class ConfigManager:
                 return result.value if result else default
         except Exception:
             return default
-
-    def load_schedules(self) -> List[ChannelSchedule]:
-        """Pobiera wszystkie harmonogramy"""
-        try:
-            with Session(self.engine) as session:
-                stmt = select(Schedule)
-                results = session.scalars(stmt).all()
-                return [r.to_domain() for r in results]
-        except Exception as e:
-            self.logger.error(f"Błąd ładowania listy harmonogramów: {e}")
-            return []
