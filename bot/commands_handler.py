@@ -1,10 +1,16 @@
+from decimal import Decimal
+
 import discord
 
 from bot.commands import AvatarCommand, CoinFlipCommand, UptimeCommand, SetNicknameCommand, HelpCommand, VersionCommand, \
     WhoisCommand, InfoCommand, PurgeCommand, SourceCodeCommand, CleanCommand
+from bot.commands.debt_add import AddDebtCommand
+from bot.commands.debt_list import ListDebtCommand
+from bot.commands.debt_reminder import ReminderDebtCommand
+from bot.commands.debt_settle import SettleDebtCommand
 from bot.commands.delete_nickname import DeleteNicknameCommand
 from bot.commands.ping import PingCommand
-from models.channel_schedule import ChannelSchedule
+from models.cleaning_schedule import CleaningSchedule
 from utils.helpers import create_embed, get_current_datetime
 from utils.logger import get_logger
 from utils.validators import TimeValidator
@@ -18,6 +24,11 @@ class CommandHandler:
         self.scheduler = scheduler
         self.validator = TimeValidator()
         self.logger = get_logger(__name__)
+
+        self.debt_add = AddDebtCommand(bot, config_manager, self.logger)
+        self.debt_list = ListDebtCommand(bot, config_manager, self.logger)
+        self.debt_reminder = ReminderDebtCommand(bot, config_manager, self.validator, self.logger)
+        self.debt_settle = SettleDebtCommand(bot, config_manager, self.logger)
 
         # Inicjalizacja modułów komend
         self.avatar_command = AvatarCommand(bot, self.logger)
@@ -35,7 +46,7 @@ class CommandHandler:
         self.clean_command = CleanCommand(bot, self.logger)
 
     async def handle_add(self, ctx, channel: discord.TextChannel, clean_time: str, options: str = ""):
-        """Obsługuje komendę !add z opcjonalnymi flagami"""
+        """Obsługuje komendę !add z opcjonalnymi flagami (czyszczenie)"""
         try:
             # Walidacja czasu
             if not self.validator.validate_time_format(clean_time):
@@ -43,7 +54,7 @@ class CommandHandler:
                 return await ctx.send("❌ Nieprawidłowy format czasu. Użyj HH:MM (np. 03:00)")
 
             # Sprawdź czy kanał już ma harmonogram
-            existing = self.config_manager.get_schedule(channel.id)
+            existing = self.config_manager.get_cleaning_schedule(channel.id, ctx.guild.id)
             if existing:
                 self.logger.info(f"Próba dodania istniejącego harmonogramu: {channel.id} od {ctx.author}")
                 return await ctx.send(
@@ -51,53 +62,55 @@ class CommandHandler:
                 )
 
             # Przetwarzanie opcji (flag)
-            send_confirmation = True  # Domyślnie wysyłaj potwierdzenie
+            exclude_pinned = True
+            frequency_id = 1  # Domyślnie codziennie
 
-            # Sprawdź czy użytkownik podał flagę --no-confirmation
-            if "--no-confirmation" in options.lower():
-                send_confirmation = False
-                self.logger.info(f"Użytkownik {ctx.author} wyłączył potwierdzenie dla {channel.id}")
+            # Parsowanie flag
+            options_lower = options.lower()
+            if "--include-pinned" in options_lower:
+                exclude_pinned = False
+            if "--weekly" in options_lower:
+                frequency_id = 2  # weekly
 
-            # Utwórz nowy harmonogram
-            new_schedule = ChannelSchedule(
+            # Utwórz nowy harmonogram czyszczenia
+            new_schedule = CleaningSchedule(
                 channel_id=channel.id,
                 channel_name=channel.name,
                 time=clean_time,
                 added_by=ctx.author.id,
                 added_at=get_current_datetime(),
-                send_confirmation=send_confirmation
+                guild_id=ctx.guild.id,
+                frequency_id=frequency_id,
+                exclude_pinned=exclude_pinned
             )
 
             # Zapisz harmonogram
-            if self.config_manager.add_schedule(new_schedule):
+            if self.config_manager.add_cleaning_schedule(new_schedule):
+                # Zaloguj akcję
+                self.config_manager.add_log(
+                    user_id=ctx.author.id,
+                    guild_id=ctx.guild.id,
+                    log_level_name="INFO",
+                    action_type_name="ADD_SCHEDULE",
+                    details=f"Dodano harmonogram czyszczenia: {channel.name} ({channel.id}) o {clean_time}"
+                )
+
                 self.logger.info(
-                    f"Dodano harmonogram: kanał={channel.name} ({channel.id}), "
-                    f"czas={clean_time}, potwierdzenie={'TAK' if send_confirmation else 'NIE'}, przez={ctx.author}"
+                    f"Dodano harmonogram czyszczenia: kanał={channel.name} ({channel.id}), "
+                    f"czas={clean_time}, częstotliwość={frequency_id}, "
+                    f"exclude_pinned={exclude_pinned}, przez={ctx.author}"
                 )
 
                 embed = create_embed(
-                    title="✅ Harmonogram dodany",
+                    title="✅ Harmonogram czyszczenia dodany",
                     description=f"Kanał {channel.mention} będzie czyszczony codziennie o **{clean_time}**",
                     color=discord.Color.green()
                 )
 
                 embed.add_field(name="ID kanału", value=str(channel.id), inline=True)
-                embed.add_field(name="Potwierdzenie", value="✅ Włączone" if send_confirmation else "❌ Wyłączone",
+                embed.add_field(name="Wyklucz przypięte", value="✅ Tak" if exclude_pinned else "❌ Nie", inline=True)
+                embed.add_field(name="Częstotliwość", value="Codziennie" if frequency_id == 1 else "Co tydzień",
                                 inline=True)
-                embed.add_field(
-                    name="Liczba harmonogramów",
-                    value=str(len(self.config_manager.load_schedules())),
-                    inline=True
-                )
-
-                # Informacja o fladze
-                if not send_confirmation:
-                    embed.add_field(
-                        name="ℹ️ Uwaga",
-                        value="Po czyszczeniu **nie zostanie wysłane** potwierdzenie na kanał.",
-                        inline=False
-                    )
-
                 embed.set_footer(text=f"Dodane przez {ctx.author}")
 
                 await ctx.send(embed=embed)
@@ -109,79 +122,81 @@ class CommandHandler:
             self.logger.error(f"Błąd w komendzie !add: {e}", exc_info=True)
             await ctx.send("❌ Wystąpił nieoczekiwany błąd podczas dodawania harmonogramu")
 
-    async def handle_remove(self, ctx, channel: discord.TextChannel):
-        """Obsługuje komendę !remove"""
-        if self.config_manager.remove_schedule(channel.id):
-            embed = create_embed(
-                title="🗑️ Harmonogram usunięty",
-                description=f"Usunięto harmonogram czyszczenia dla {channel.mention}",
-                color=discord.Color.orange()
-            )
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"❌ Nie znaleziono harmonogramu dla {channel.mention}")
+    async def handle_add_debt_reminder(
+        self,
+        ctx,
+        channel: discord.TextChannel,
+        run_time: str,
+        frequency_id: int = 1,
+        message_template: str = ""
+    ):
+        await self.debt_reminder.handle(ctx, channel, run_time, frequency_id, message_template)
 
+    # Nowe metody dla długów
+    async def handle_add_debt(self, ctx, debtor: discord.Member, creditor: discord.Member,
+                              amount: str, description: str = "", currency: str = "PLN"):
+        """Obsługuje dodawanie długu"""
+        try:
+            amount_decimal = Decimal(amount)
+            await self.debt_add.handle(ctx, debtor, creditor, amount_decimal, description, currency)
+        except Exception as e:
+            self.logger.error(f"Błąd w handle_add_debt: {e}", exc_info=True)
+            await ctx.send("❌ Wystąpił błąd podczas dodawania długu")
+
+    async def handle_settle_debt(self, ctx, debt_id: int):
+        """Obsługuje spłatę długu"""
+        await self.debt_settle.handle(ctx, debt_id)
+
+    async def handle_list_debts(self, ctx, member: discord.Member = None, show_settled: bool = False):
+        """Obsługuje listowanie długów"""
+        await self.debt_list.handle(ctx, member, show_settled)
+
+    # Aktualizacja istniejących metod
     async def handle_list(self, ctx):
-        """Obsługuje komendę !list"""
-        schedules = self.config_manager.load_schedules()
+        """Obsługuje komendę !list - pokazuje wszystkie harmonogramy"""
+        cleaning_schedules = self.config_manager.get_all_cleaning_schedules()
+        reminder_schedules = self.config_manager.get_debt_reminder_schedules(ctx.guild.id)
 
-        if not schedules:
+        if not cleaning_schedules and not reminder_schedules:
             embed = create_embed(
-                title="📋 Harmonogramy czyszczenia",
+                title="📋 Harmonogramy",
                 description="Brak aktywnych harmonogramów",
                 color=discord.Color.blue()
             )
         else:
             embed = create_embed(
-                title="📋 Harmonogramy czyszczenia",
-                description=f"Liczba aktywnych harmonogramów: {len(schedules)}",
+                title="📋 Harmonogramy",
+                description=f"Czyszczenie: {len(cleaning_schedules)} | Przypomnienia: {len(reminder_schedules)}",
                 color=discord.Color.blue()
             )
 
-            for schedule in schedules:
-                channel = self.bot.get_channel(schedule.channel_id)
-                channel_mention = channel.mention if channel else f"ID: {schedule.channel_id}"
+            # Harmonogramy czyszczenia
+            if cleaning_schedules:
+                cleaning_text = ""
+                for schedule in cleaning_schedules[:5]:  # Ogranicz do 5
+                    channel = self.bot.get_channel(schedule.channel_id)
+                    channel_mention = channel.mention if channel else f"ID: {schedule.channel_id}"
+                    cleaning_text += f"• {channel_mention} o **{schedule.time}**\n"
 
-                # Emoji dla statusu potwierdzenia
-                confirmation_emoji = "✅" if schedule.send_confirmation else "❌"
+                if len(cleaning_schedules) > 5:
+                    cleaning_text += f"\n...i {len(cleaning_schedules) - 5} więcej"
 
-                embed.add_field(
-                    name=f"⏰ {schedule.time}",
-                    value=(
-                        f"Kanał: {channel_mention}\n"
-                        f"ID: {schedule.channel_id}\n"
-                        f"Potwierdzenie: {confirmation_emoji} "
-                        f"{'TAK' if schedule.send_confirmation else 'NIE'}"
-                    ),
-                    inline=False
-                )
+                embed.add_field(name="🧹 Czyszczenie", value=cleaning_text, inline=False)
+
+            # Harmonogramy przypomnień
+            if reminder_schedules:
+                reminder_text = ""
+                for schedule in reminder_schedules[:5]:  # Ogranicz do 5
+                    channel = self.bot.get_channel(schedule.channel_id)
+                    channel_mention = channel.mention if channel else f"ID: {schedule.channel_id}"
+                    reminder_text += f"• {channel_mention} o **{schedule.run_time}**\n"
+
+                if len(reminder_schedules) > 5:
+                    reminder_text += f"\n...i {len(reminder_schedules) - 5} więcej"
+
+                embed.add_field(name="💰 Przypomnienia o długach", value=reminder_text, inline=False)
 
         await ctx.send(embed=embed)
-
-    async def handle_test(self, ctx, channel: discord.TextChannel = None):
-        """Obsługuje komendę !test"""
-        target_channel = channel or ctx.channel
-
-        embed = create_embed(
-            title="🧪 Test czyszczenia",
-            description=f"Rozpoczynam testowe czyszczenie {target_channel.mention}...",
-            color=discord.Color.yellow()
-        )
-
-        msg = await ctx.send(embed=embed)
-        deleted_count = await self.scheduler.execute_test_clean(target_channel.id)
-
-        embed = create_embed(
-            title="✅ Test zakończony",
-            description=f"Usunięto {deleted_count} wiadomości z {target_channel.mention}",
-            color=discord.Color.green()
-        )
-
-        try:
-            await msg.edit(embed=embed)
-        except discord.NotFound:
-            # Jeśli wiadomość została usunięta podczas czyszczenia, wyślij nową
-            await ctx.send(embed=embed)
 
     async def handle_help(self, ctx):
         await self.help_command.handle(ctx)

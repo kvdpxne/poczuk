@@ -69,6 +69,33 @@ class DiscordBot(commands.Bot):
         async def on_command_error(ctx, error):
             await self._on_command_error_handler(ctx, error)
 
+
+        @self.command(name="adddebt", aliases=["debtadd", "dodajdlug"])
+        @commands.has_permissions(administrator=True)
+        async def add_debt_command(ctx, debtor: discord.Member, creditor: discord.Member,
+                                   amount: str, *, description: str = ""):
+            await self.command_handler.handle_add_debt(ctx, debtor, creditor, amount, description)
+
+        @self.command(name="settledebt", aliases=["debtpay", "splacdlug"])
+        @commands.has_permissions(administrator=True)
+        async def settle_debt_command(ctx, debt_id: int):
+            await self.command_handler.handle_settle_debt(ctx, debt_id)
+
+        @self.command(name="listdebts", aliases=["debts", "dlugi"])
+        async def list_debts_command(ctx, member: discord.Member = None):
+            await self.command_handler.handle_list_debts(ctx, member)
+
+        @self.command(name="addreminder", aliases=["remindadd", "dodajprzypomnienie"])
+        @commands.has_permissions(administrator=True)
+        async def add_reminder_command(ctx, channel: discord.TextChannel, run_time: str,
+                                       frequency: str = "daily", *, message_template: str = ""):
+            frequency_map = {"daily": 1, "weekly": 2}
+            frequency_id = frequency_map.get(frequency.lower(), 1)
+            await self.command_handler.handle_add_debt_reminder(ctx, channel, run_time, frequency_id, message_template)
+
+
+
+
         # Zmień deklarację komendy add na:
         @self.command(name="add")
         @commands.has_permissions(administrator=True)
@@ -178,7 +205,8 @@ class DiscordBot(commands.Bot):
             await ctx.send(f"❌ Brakujący argument. Użyj: `{ctx.command.signature}`")
         else:
             await ctx.send(f"❌ Błąd: {str(error)}")
-            log_error('commands', error, f"Komenda: {ctx.command.name}, Użytkownik: {ctx.author}")
+            log_error('commands', error, f"Komenda: Nieznana, Użytkownik: {ctx.author}")
+            # log_error('commands', error, f"Komenda: {ctx.command.name}, Użytkownik: {ctx.author}")
 
     def run_bot(self):
         token = self.token_manager.load_token()

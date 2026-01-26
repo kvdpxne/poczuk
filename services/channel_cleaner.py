@@ -13,32 +13,55 @@ class ChannelCleaner:
     def __init__(self):
         self.logger = get_logger(__name__)
 
-    async def clean_channel(self, bot, channel_id: int, send_confirmation: bool = True) -> int:
+    async def clean_channel(
+        self,
+        bot,
+        channel_id: int,
+        exclude_pinned: bool = True,
+        message_limit: int = 0,
+        send_confirmation: bool = False
+    ) -> int:
         """
-        Czyści wszystkie wiadomości na kanale
-        Zwraca liczbę usuniętych wiadomości
+        Czyści wiadomości na kanale z opcjami filtrowania
 
         :param bot: Instancja bota
         :param channel_id: ID kanału do wyczyszczenia
-        :param send_confirmation: Czy wysłać wiadomość potwierdzającą (domyślnie: True)
+        :param exclude_pinned: Czy pomijać przypięte wiadomości
+        :param message_limit: Limit wiadomości do usunięcia (0 = wszystkie)
+        :param send_confirmation: Czy wysłać potwierdzenie
+        :return: Liczba usuniętych wiadomości
         """
         try:
             channel = bot.get_channel(channel_id)
             if not channel:
                 channel = await bot.fetch_channel(channel_id)
 
-            self.logger.info(f"Rozpoczynam czyszczenie kanału: {channel.name} ({channel.id})")
+            self.logger.info(
+                f"Rozpoczynam czyszczenie kanału: {channel.name} ({channel.id}) "
+                f"exclude_pinned={exclude_pinned}, limit={message_limit}"
+            )
 
-            # Usuwa wszystkie wiadomości
-            deleted = await channel.purge(limit=None, oldest_first=False)
+            # Funkcja sprawdzająca dla filtrowania
+            def check(message):
+                if exclude_pinned and message.pinned:
+                    return False
+                return True
+
+            # Usuwanie wiadomości z limitem
+            limit = None if message_limit == 0 else message_limit
+            deleted = await channel.purge(
+                limit=limit,
+                check=check,
+                oldest_first=False
+            )
             deleted_count = len(deleted)
 
             self.logger.info(f"Zakończono czyszczenie: {deleted_count} wiadomości usunięto")
 
-            # Wyślij potwierdzenie na kanale TYLKO jeśli send_confirmation=True
-            if send_confirmation:
+            # Wyślij potwierdzenie jeśli wymagane
+            if send_confirmation and deleted_count > 0:
                 await self._send_clean_confirmation(channel, deleted_count)
-            else:
+            elif not send_confirmation:
                 self.logger.info(f"Pominięto wysyłanie potwierdzenia dla kanału {channel.id}")
 
             return deleted_count

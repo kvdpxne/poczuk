@@ -4,24 +4,27 @@ Zarządzanie harmonogramami - Single Responsibility Principle
 import asyncio
 from datetime import datetime
 from typing import List
-from models.channel_schedule import ChannelSchedule
+from models.cleaning_schedule import CleaningSchedule
+from models.debt_reminder_schedule import DebtReminderSchedule
 from utils.validators import TimeValidator
 from services.channel_cleaner import ChannelCleaner
+from services.debt_reminder import DebtReminder
 from utils.logger import get_logger
 
 
 class Scheduler:
-    """Zarządza harmonogramem czyszczenia kanałów"""
+    """Zarządza harmonogramami różnych zadań"""
 
     def __init__(self, bot, config_manager):
         self.bot = bot
         self.config_manager = config_manager
         self.cleaner = ChannelCleaner()
+        self.debt_reminder = DebtReminder(bot, config_manager)
         self.validator = TimeValidator()
         self.logger = get_logger(__name__)
 
     async def start(self):
-        """Uruchamia proces sprawdzania harmonogramu"""
+        """Uruchamia proces sprawdzania harmonogramów"""
         await self.bot.wait_until_ready()
 
         self.logger.info("Rozpoczęto monitorowanie harmonogramów")
@@ -33,41 +36,82 @@ class Scheduler:
     async def _check_and_execute_schedules(self):
         """Sprawdza i wykonuje harmonogramy"""
         current_time = self.validator.get_current_time()
-        schedules = self.config_manager.load_schedules()
 
-        for schedule in schedules:
+        # Sprawdź harmonogramy czyszczenia
+        cleaning_schedules = self.config_manager.get_all_cleaning_schedules()
+        for schedule in cleaning_schedules:
             if schedule.matches_current_time(current_time):
-                await self._execute_schedule(schedule)
+                await self._execute_cleaning_schedule(schedule)
 
-    async def _execute_schedule(self, schedule: ChannelSchedule):
+        # Sprawdź harmonogramy przypomnień o długach
+        reminder_schedules = self.config_manager.get_debt_reminder_schedules()
+        for schedule in reminder_schedules:
+            if schedule.is_active and schedule.run_time == current_time:
+                await self._execute_debt_reminder_schedule(schedule)
+
+    async def _execute_cleaning_schedule(self, schedule: CleaningSchedule):
         """Wykonuje czyszczenie dla danego harmonogramu"""
         try:
             self.logger.info(
-                f"Wykonuję harmonogram: kanał={schedule.channel_name} ({schedule.channel_id}), "
-                f"czas={schedule.time}, potwierdzenie={'TAK' if schedule.send_confirmation else 'NIE'}"
+                f"Wykonuję harmonogram czyszczenia: kanał={schedule.channel_id}, "
+                f"czas={schedule.time}"
             )
 
-            # Przekaż informację o potwierdzeniu do cleanera
+            # Wykonaj czyszczenie
             deleted_count = await self.cleaner.clean_channel(
                 self.bot,
                 schedule.channel_id,
-                send_confirmation=schedule.send_confirmation
+                exclude_pinned=schedule.exclude_pinned
             )
 
-            # Zaloguj wykonanie
-            # log_schedule_execution(schedule.channel_id, schedule.channel_name, deleted_count)
+            # Aktualizuj czas ostatniego uruchomienia
+            if schedule.schedule_id:
+                self.config_manager.update_cleaning_schedule_last_run(
+                    schedule.schedule_id,
+                    datetime.now()
+                )
+
+            # Zaloguj akcję
+            self.config_manager.add_log(
+                user_id=self.bot.user.id,
+                guild_id=schedule.guild_id,
+                log_level_name="INFO",
+                action_type_name="RUN_CLEANING",
+                details=f"Wykonano czyszczenie: kanał={schedule.channel_id}, usunięto={deleted_count}"
+            )
+
+            self.logger.info(
+                f"Zakończono harmonogram czyszczenia: kanał={schedule.channel_id}, "
+                f"usunięto={deleted_count} wiadomości"
+            )
 
         except Exception as e:
             self.logger.error(
-                f"Błąd wykonania harmonogramu: kanał={schedule.channel_id}, błąd={e}",
+                f"Błąd wykonania harmonogramu czyszczenia: kanał={schedule.channel_id}, błąd={e}",
                 exc_info=True
             )
 
-    async def execute_test_clean(self, channel_id: int) -> int:
-        """Wykonuje testowe czyszczenie (bez harmonogramu)"""
-        print(f"\n[{datetime.now()}] Testowe czyszczenie dla {channel_id}")
-        return await self.cleaner.clean_channel(self.bot, channel_id)
+    async def _execute_debt_reminder_schedule(self, schedule: DebtReminderSchedule):
+        """Wykonuje przypomnienia o długach"""
+        try:
+            self.logger.info(
+                f"Wykonuję harmonogram przypomnień: kanał={schedule.channel_id}, "
+                f"czas={schedule.run_time}"
+            )
 
-    def get_all_schedules(self) -> List[ChannelSchedule]:
-        """Zwraca wszystkie harmonogramy"""
-        return self.config_manager.load_schedules()
+            await self.debt_reminder.send_reminders(schedule)
+
+            # Zaloguj akcję
+            self.config_manager.add_log(
+                user_id=self.bot.user.id,
+                guild_id=schedule.guild_id,
+                log_level_name="INFO",
+                action_type_name="SEND_REMINDER",
+                details=f"Wysłano przypomnienia o długach: kanał={schedule.channel_id}"
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"Błąd wykonania harmonogramu przypomnień: kanał={schedule.channel_id}, błąd={e}",
+                exc_info=True
+            )

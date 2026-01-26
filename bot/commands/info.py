@@ -18,8 +18,9 @@ class InfoCommand:
             self.logger.info(f"Komenda !info wywołana przez {ctx.author} ({ctx.author.id})")
 
             # Pobierz dane
-            schedules = self.config_manager.load_schedules()
-            schedule_count = len(schedules)
+            cleaning_schedules = self.config_manager.get_all_cleaning_schedules()
+            reminder_schedules = self.config_manager.get_debt_reminder_schedules(ctx.guild.id)
+            debts = self.config_manager.get_debts(guild_id=ctx.guild.id, is_settled=False)
 
             # Statystyki systemowe
             process = psutil.Process(os.getpid())
@@ -36,13 +37,15 @@ class InfoCommand:
                 color=discord.Color.blue(),
             )
 
-            embed.add_field(name="Wersja", value="2.0", inline=True)
+            embed.add_field(name="Wersja", value="1.0", inline=True)
             embed.add_field(name="Autor", value="kvdpxne", inline=True)
-            embed.add_field(name="Prefix", value="!", inline=True)
+            embed.add_field(name="Prefix", value="$", inline=True)
 
             embed.add_field(name="Serwery", value=str(guild_count), inline=True)
             embed.add_field(name="Użytkownicy", value=str(total_members), inline=True)
-            embed.add_field(name="Harmonogramy", value=str(schedule_count), inline=True)
+            # embed.add_field(name="Harmonogramy czyszczenia", value=str(len(cleaning_schedules)), inline=True)
+            # embed.add_field(name="Harmonogramy przypomnień", value=str(len(reminder_schedules)), inline=True)
+            # embed.add_field(name="Aktywne długi", value=str(len(debts)), inline=True)
 
             embed.add_field(name="💾 RAM", value=f"{memory_mb:.1f} MB", inline=True)
             embed.add_field(name="⚡ CPU", value=f"{cpu_percent:.1f}%", inline=True)

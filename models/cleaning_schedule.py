@@ -7,7 +7,7 @@ from typing import Optional
 
 
 @dataclass
-class ChannelSchedule:
+class CleaningSchedule:
     """Model reprezentujący harmonogram czyszczenia kanału"""
     channel_id: int
     channel_name: str
@@ -15,12 +15,11 @@ class ChannelSchedule:
     added_by: int
     added_at: datetime
     guild_id: Optional[int] = None
-    frequency_id: int = 1  # Domyślnie codziennie
+    frequency_id: int = 1
     is_active: bool = True
     exclude_pinned: bool = True
-    message_limit: int = 0
     last_run_at: Optional[datetime] = None
-    # Usunięto send_confirmation - przeniesione do guild_settings
+    schedule_id: Optional[int] = None
 
     def to_dict(self) -> dict:
         """Konwertuje obiekt do słownika"""
@@ -34,26 +33,9 @@ class ChannelSchedule:
             "frequency_id": self.frequency_id,
             "is_active": self.is_active,
             "exclude_pinned": self.exclude_pinned,
-            "message_limit": self.message_limit,
-            "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None
+            "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None,
+            "schedule_id": self.schedule_id
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'ChannelSchedule':
-        """Tworzy obiekt ze słownika"""
-        return cls(
-            channel_id=data["channel_id"],
-            channel_name=data["channel_name"],
-            time=data["time"],
-            added_by=data["added_by"],
-            added_at=datetime.fromisoformat(data["added_at"]),
-            guild_id=data.get("guild_id"),
-            frequency_id=data.get("frequency_id", 1),
-            is_active=data.get("is_active", True),
-            exclude_pinned=data.get("exclude_pinned", True),
-            message_limit=data.get("message_limit", 0),
-            last_run_at=datetime.fromisoformat(data["last_run_at"]) if data.get("last_run_at") else None
-        )
 
     def matches_current_time(self, current_time: str) -> bool:
         """Sprawdza czy harmonogram pasuje do podanego czasu"""
