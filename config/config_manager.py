@@ -11,6 +11,7 @@ from database.models.debt import Debt
 from database.models.debt_schedule import DebtSchedule
 from database.models.frequency import Frequency
 from database.models.guild_setting import GuildSetting
+from database.models.log import Log
 from database.models.log_level import LogLevel
 from database.models.schedule import Schedule
 from database.models.user_setting import UserSetting
@@ -104,7 +105,6 @@ class ConfigManager:
                     return False
 
                 # Dodaj log
-                from database.models.log import Log
                 log = Log(
                     user_id=user_id,
                     guild_id=guild_id,

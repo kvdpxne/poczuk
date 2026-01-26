@@ -111,11 +111,6 @@ class DiscordBot(commands.Bot):
         async def list_command(ctx):
             await self.command_handler.handle_list(ctx)
 
-        @self.command(name="test")
-        @commands.has_permissions(administrator=True)
-        async def test_command(ctx, channel: discord.TextChannel = None):
-            await self.command_handler.handle_test(ctx, channel)
-
         @self.command(name="help", aliases=['h'])
         async def help_command(ctx):
             await self.command_handler.handle_help(ctx)
