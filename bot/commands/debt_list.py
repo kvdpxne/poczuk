@@ -112,7 +112,7 @@ class ListDebtCommand:
                         status = "✅ " if debt.is_settled else "❌ "
                         description = f" ({debt.description[:30]}...)" if debt.description and len(
                             debt.description) > 30 else f" ({debt.description})" if debt.description else ""
-                        details_text += f"  {i}. {status}{debt.amount:.2f} {debt.currency}{description}\n"
+                        details_text += f"  {debt.debt_id}. {status}{debt.amount:.2f} {debt.currency}{description}\n"
 
                 if details_text:
                     embed.add_field(
