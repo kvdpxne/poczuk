@@ -49,7 +49,6 @@ class InfoCommand:
 
             embed.add_field(name="💾 RAM", value=f"{memory_mb:.1f} MB", inline=True)
             embed.add_field(name="⚡ CPU", value=f"{cpu_percent:.1f}%", inline=True)
-            embed.add_field(name="🏓 Ping", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
 
             embed.add_field(
                 name="📦 Kod źródłowy",

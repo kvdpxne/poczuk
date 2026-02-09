@@ -5,7 +5,13 @@ import discord
 from datetime import datetime
 
 
-def create_embed(title: str, description: str, color: discord.Color) -> discord.Embed:
+def create_embed(
+    title: str,
+    description: str,
+    color: discord.Color,
+    author: str | None = None,
+    icon_url: str | None = None,
+) -> discord.Embed:
     """Tworzy osadzoną wiadomość - DRY (Don't Repeat Yourself)"""
     embed = discord.Embed(
         title=title,
@@ -13,6 +19,13 @@ def create_embed(title: str, description: str, color: discord.Color) -> discord.
         color=color,
         timestamp=datetime.now()
     )
+
+    if None not in [author, icon_url]:
+        embed.set_footer(
+            text=f"Żądane przez {author}",
+            icon_url=icon_url
+        )
+
     return embed
 
 
