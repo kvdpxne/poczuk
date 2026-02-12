@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: discord-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'

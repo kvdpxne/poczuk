@@ -1,0 +1,23 @@
+# Własne zmienne środowiskowe
+.env
+
+# Systemy kontroli wersji
+.git
+.gitignore
+
+# Katalogi tymczasowe i cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+*.log
+
+# Środowiska wirtualne
+venv
+env
+.env.local
+
+# IDE
+.vscode
+.idea
